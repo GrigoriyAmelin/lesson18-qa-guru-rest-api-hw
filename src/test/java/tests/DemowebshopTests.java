@@ -1,8 +1,8 @@
 package tests;
 
+import io.qameta.allure.Story;
 import io.restassured.http.Cookies;
-import io.restassured.response.Response;
-import io.restassured.response.ValidatableResponse;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Cookie;
@@ -10,17 +10,56 @@ import org.openqa.selenium.Cookie;
 import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Selenide.*;
 import static com.codeborne.selenide.WebDriverRunner.getWebDriver;
+import static io.qameta.allure.Allure.step;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class DemowebshopTests extends TestBase {
 
+    @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @Test
-    @DisplayName("Регистрация нового пользователя")
+    @DisplayName("Вход в личный кабинет и получение куки авторизации")
     void userLogInTest() {
 
-        String cookie = given()
+        step("Залогиниться через API и получить куку \"NOPCOMMERCE.AUTH\"", () -> {
+
+            String cookie = given()
+                    .contentType("application/x-www-form-urlencoded")
+                    .formParam("Email", email)
+                    .formParam("Password", password)
+                    .formParam("RememberMe", rememberMe)
+                    .when()
+                    .post("/login")
+                    .then()
+                    .log().all()
+                    .statusCode(302)
+                    .extract()
+                    .response()
+                    .cookie("NOPCOMMERCE.AUTH");
+
+            System.out.println("\n Cookies in userLogInTest are: " + cookie + "\n");
+
+            step("Открыть любую страницу для активации сессии пользователя", () ->
+                    open("/content/images/thumbs/0000215.png"));
+
+            step("Применить куку \"NOPCOMMERCE.AUTH\"", () ->
+                    getWebDriver().manage().addCookie(
+                            new Cookie("NOPCOMMERCE.AUTH", cookie)));
+
+            step("Открыть основную страницу сайта", () ->
+                    open(""));
+
+            step("Проверить, что пользователь вошел в личный кабинет", () ->
+                    $(".account").shouldHave(text(email)));
+        });
+    }
+
+    @Story("Проверка сайта http://demowebshop.tricentis.com/")
+    @Test
+    @DisplayName("Добавление товара в пустую корзину залогиненного пользователя")
+    void addToEmptyCartTest() {
+
+        Cookies cookiesAll = given()
                 .contentType("application/x-www-form-urlencoded")
                 .formParam("Email", email)
                 .formParam("Password", password)
@@ -30,26 +69,34 @@ public class DemowebshopTests extends TestBase {
                 .then()
                 .log().all()
                 .statusCode(302)
-                .extract().response().cookie("NOPCOMMERCE.AUTH");
+                .extract()
+                .response()
+                .getDetailedCookies();
 
-        System.out.println("\n Cookie is: " + cookie + "\n");
+        System.out.println("\n Cookies in addToEmptyCartTest are: " + cookiesAll + "\n");
 
-        open("/content/images/thumbs/0000215.png");
-
-        getWebDriver().manage().addCookie(new Cookie("NOPCOMMERCE.AUTH", cookie));
-
-        open("");
-        sleep(2000);
-
-        $(".account").shouldHave(text(email));
-
+        given()
+                .contentType("application/x-www-form-urlencoded; charset=UTF-8")
+                .cookies(cookiesAll)
+                .formParam("product_attribute_5_7_1", 1)
+                .formParam("addtocart_5.EnteredQuantity", 2)
+                .when()
+                .post("/addproducttocart/details/5/1")
+                .then()
+                .log().all()
+                .statusCode(200)
+                .body("success", is(true))
+                .body("message", is("The product has been added to your " +
+                        "\u003ca href=\"/cart\"\u003eshopping cart\u003c/a\u003e"))
+                .body("updatetopcartsectionhtml", is("(2)"));
     }
 
+    @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @Test
-    @DisplayName("Регистрация нового пользователя 2")
-    void registerNewUserTestTwo() {
+    @DisplayName("Очистка корзины пользователя")
+    void toUpdateCartTest() {
 
-        Cookies cookie = given()
+        Cookies cookiesAll = given()
                 .contentType("application/x-www-form-urlencoded")
                 .formParam("Email", email)
                 .formParam("Password", password)
@@ -59,86 +106,22 @@ public class DemowebshopTests extends TestBase {
                 .then()
                 .log().all()
                 .statusCode(302)
-                .extract().response().getDetailedCookies();
+                .extract()
+                .response()
+                .getDetailedCookies();
 
-        System.out.println("\n Cookie is: " + cookie + "\n");
+        System.out.println("\n Cookies in clearCartTest are: " + cookiesAll + "\n");
 
-        given()
-                .cookie(String.valueOf(cookie))
-                .header("Referer", "/login")
-                .when()
-                .get()
-                .then()
-//                .log().cookies()
-                .statusCode(200)
-                .extract().response().cookies();
-    }
-
-    @Test
-    void addToCartAsNewUserTest() {
         given()
                 .contentType("application/x-www-form-urlencoded; charset=UTF-8")
-                .body("product_attribute_72_5_18=53" +
-                        "&product_attribute_72_6_19=54" +
-                        "&product_attribute_72_3_20=57" +
-                        "&addtocart_72.EnteredQuantity=1")
+                .cookies(cookiesAll)
+                .formParam("removefromcart", 2374929)
+                .formParam("itemquantity2374929", 2)
+                .formParam("updatecart", "Update shopping cart")
                 .when()
-                .post("http://demowebshop.tricentis.com/addproducttocart/details/72/1")
+                .post("/cart")
                 .then()
-                .log().all()
-                .statusCode(200)
-                .body("success", is(true))
-                .body("message", is("The product has been added to your " +
-                        "\u003ca href=\"/cart\"\u003eshopping cart\u003c/a\u003e"))
-                .body("updatetopcartsectionhtml", is("(1)"));
+                .log().cookies()
+                .statusCode(200);
     }
-
-    @Test
-    void addToCartWithCookieTest() {
-        given()
-                .contentType("application/x-www-form-urlencoded; charset=UTF-8")
-                .cookie("Nop.customer=4a270881-47e7-42c9-a179-438c242fa564; " +
-                        "ARRAffinity=1818b4c81d905377ced20e7ae987703a674897394db6e97dc1316168f754a687")
-                .body("product_attribute_72_5_18=53" +
-                        "&product_attribute_72_6_19=54" +
-                        "&product_attribute_72_3_20=57" +
-                        "&addtocart_72.EnteredQuantity=1")
-                .when()
-                .post("http://demowebshop.tricentis.com/addproducttocart/details/72/1")
-                .then()
-                .log().all()
-                .statusCode(200)
-                .body("success", is(true))
-                .body("message", is("The product has been added to your " +
-                        "\u003ca href=\"/cart\"\u003eshopping cart\u003c/a\u003e"))
-                .body("updatetopcartsectionhtml", is("(8)"));
-    }
-
-    @Test
-    void addToCartTestWithInt() {
-        Integer cartSize = 0;
-
-        ValidatableResponse response =
-                given()
-                        .contentType("application/x-www-form-urlencoded; charset=UTF-8")
-                        .cookie("Nop.customer=4a270881-47e7-42c9-a179-438c242fa564; " +
-                                "ARRAffinity=1818b4c81d905377ced20e7ae987703a674897394db6e97dc1316168f754a687")
-                        .body("product_attribute_72_5_18=53" +
-                                "&product_attribute_72_6_19=54" +
-                                "&product_attribute_72_3_20=57" +
-                                "&addtocart_72.EnteredQuantity=1")
-                        .when()
-                        .post("http://demowebshop.tricentis.com/addproducttocart/details/72/1")
-                        .then()
-                        .log().all()
-                        .statusCode(200)
-                        .body("success", is(true))
-                        .body("message", is("The product has been added to your " +
-                                "\u003ca href=\"/cart\"\u003eshopping cart\u003c/a\u003e"));
-
-//        to do
-//        assertThat(response.extract().path("updatetopcartsectionhtml").toString());
-//                .body("updatetopcartsectionhtml", is("(8)"));
-    }
-
 }
