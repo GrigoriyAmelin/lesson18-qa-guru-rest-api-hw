@@ -2,6 +2,7 @@ package tests;
 
 import io.qameta.allure.Story;
 import io.restassured.http.Cookies;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Cookie;
