@@ -2,6 +2,7 @@ package tests;
 
 import io.qameta.allure.Story;
 import io.restassured.http.Cookies;
+import io.restassured.response.ValidatableResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Cookie;
@@ -122,5 +123,62 @@ public class DemowebshopTests extends TestBase {
                 .then()
                 .log().cookies()
                 .statusCode(200);
+    }
+
+    @Story("Проверка сайта http://demowebshop.tricentis.com/")
+    @Test
+    @DisplayName("Добавление товара и корзины нового пользователя")
+    void newUserUpdateCartTest() {
+
+        step("Зарегистрироваться через API и получить куку \"NOPCOMMERCE.AUTH\"", () -> {
+
+            given()
+                    .contentType("application/x-www-form-urlencoded")
+                    .formParam("__RequestVerificationToken", requestVerificationToken)
+                    .formParam("Gender", gender)
+                    .formParam("FirstName", firstName)
+                    .formParam("LastName", lastName)
+                    .formParam("Email", emailRegistration)
+                    .formParam("Password", passwordRegistration)
+                    .formParam("ConfirmPassword", passwordRegistration)
+                    .formParam("register-button", registerButton)
+                    .when()
+                    .post("/register")
+                    .then()
+                    .statusCode(302);
+
+        });
+
+        step("Залогиниться через API и получить куку \"NOPCOMMERCE.AUTH\"", () -> {
+
+            String cookie = given()
+                    .contentType("application/x-www-form-urlencoded")
+                    .formParam("Email", emailRegistration)
+                    .formParam("Password", passwordRegistration)
+                    .formParam("RememberMe", rememberMe)
+                    .when()
+                    .post("/login")
+                    .then()
+                    .log().all()
+                    .statusCode(200)
+                    .extract()
+                    .response()
+                    .cookie("NOPCOMMERCE.AUTH");
+
+            System.out.println("\n Cookies in userLogInTest are: " + cookie + "\n");
+
+            step("Открыть любую страницу для активации сессии пользователя", () ->
+                    open("/content/images/thumbs/0000215.png"));
+
+            step("Применить куку \"NOPCOMMERCE.AUTH\"", () ->
+                    getWebDriver().manage().addCookie(
+                            new Cookie("NOPCOMMERCE.AUTH", cookie)));
+
+            step("Открыть основную страницу сайта", () ->
+                    open(""));
+
+            step("Проверить, что пользователь вошел в личный кабинет", () ->
+                    $(".account").shouldHave(text(emailRegistration)));
+        });
     }
 }
