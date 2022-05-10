@@ -2,10 +2,16 @@ package tests;
 
 import io.qameta.allure.Story;
 import io.restassured.http.Cookies;
-import io.restassured.response.ValidatableResponse;
+import io.restassured.path.xml.XmlPath;
+import io.restassured.path.xml.XmlPath.CompatibilityMode;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.openqa.selenium.By;
 import org.openqa.selenium.Cookie;
+import org.openqa.selenium.WebElement;
+
+import java.util.List;
 
 import static com.codeborne.selenide.Condition.text;
 import static com.codeborne.selenide.Selenide.*;
@@ -13,12 +19,14 @@ import static com.codeborne.selenide.WebDriverRunner.getWebDriver;
 import static io.qameta.allure.Allure.step;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DemowebshopTests extends TestBase {
 
     @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @Test
-    @DisplayName("Вход в личный кабинет и получение куки авторизации")
+    @DisplayName("Вход в личный кабинет зарегистрированного пользователя")
     void userLogInTest() {
 
         step("Залогиниться через API и получить куку \"NOPCOMMERCE.AUTH\"", () -> {
@@ -37,7 +45,7 @@ public class DemowebshopTests extends TestBase {
                     .response()
                     .cookie("NOPCOMMERCE.AUTH");
 
-            System.out.println("\n Cookies in userLogInTest are: " + cookie + "\n");
+            System.out.println("\n Cookie \"NOPCOMMERCE.AUTH\" in userLogInTest is: " + cookie + "\n");
 
             step("Открыть любую страницу для активации сессии пользователя", () ->
                     open("/content/images/thumbs/0000215.png"));
@@ -56,7 +64,7 @@ public class DemowebshopTests extends TestBase {
 
     @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @Test
-    @DisplayName("Добавление товара в пустую корзину залогиненного пользователя")
+    @DisplayName("Добавление товара в корзину залогиненного пользователя")
     void addToEmptyCartTest() {
 
         Cookies cookiesAll = given()
@@ -88,7 +96,7 @@ public class DemowebshopTests extends TestBase {
                 .body("success", is(true))
                 .body("message", is("The product has been added to your " +
                         "\u003ca href=\"/cart\"\u003eshopping cart\u003c/a\u003e"))
-                .body("updatetopcartsectionhtml", is("(2)"));
+                .body("updatetopcartsectionhtml", is(notNullValue()));
     }
 
     @Story("Проверка сайта http://demowebshop.tricentis.com/")
@@ -96,7 +104,7 @@ public class DemowebshopTests extends TestBase {
     @DisplayName("Очистка корзины пользователя")
     void toUpdateCartTest() {
 
-        Cookies cookiesAll = given()
+        String cookie = given()
                 .contentType("application/x-www-form-urlencoded")
                 .formParam("Email", email)
                 .formParam("Password", password)
@@ -108,23 +116,65 @@ public class DemowebshopTests extends TestBase {
                 .statusCode(302)
                 .extract()
                 .response()
-                .getDetailedCookies();
+                .cookie("NOPCOMMERCE.AUTH");
 
-        System.out.println("\n Cookies in clearCartTest are: " + cookiesAll + "\n");
+        System.out.println("\n Cookie \"NOPCOMMERCE.AUTH\" in userLogInTest is: " + cookie + "\n");
 
-        given()
-                .contentType("application/x-www-form-urlencoded; charset=UTF-8")
-                .cookies(cookiesAll)
-                .formParam("removefromcart", 2374929)
-                .formParam("itemquantity2374929", 2)
-                .formParam("updatecart", "Update shopping cart")
-                .when()
-                .post("/cart")
-                .then()
-                .log().cookies()
-                .statusCode(200);
+        step("Открыть страницу товара и открыть новую сессию пользователя", () ->
+                open("/50s-rockabilly-polka-dot-top-jr-plus-size"));
+
+        step("Применить куку \"NOPCOMMERCE.AUTH\"", () ->
+                getWebDriver().manage().addCookie(
+                        new Cookie("NOPCOMMERCE.AUTH", cookie)));
+
+        step("Добавить товар в корзину", () -> {
+            $(".qty-input").setValue("2");
+            $("#add-to-cart-button-5").click();
+        });
+
+        step("Открыть корзину клиента", () ->
+                $("#topcartlink").click());
+
+        step("Выбрать все товары в корзине", () -> {
+                    List<WebElement> checkboxes = getWebDriver().findElements(By.name("removefromcart"));
+                    int numberOfCheckboxes = checkboxes.size();
+                    for (WebElement cb : checkboxes) {
+                        cb.click();
+                    }
+                    System.out.println("Number of products is: " + numberOfCheckboxes);
+                }
+        );
+
+        step("Удалить все товары из корзины", () -> {
+            $(".update-cart-button").click();
+            sleep(2000);
+        });
+
+        step("Проверка отсутствия товаров в корзине через API", () -> {
+
+            String response = given()
+                    .cookie(cookie)
+                    .when()
+                    .get("/cart")
+                    .then()
+                    .statusCode(200)
+                    .extract()
+                    .response()
+                    .asString();
+
+            System.out.println("Response body is:\n" + response);
+
+            XmlPath responseHtml = new XmlPath(
+                    CompatibilityMode.HTML,
+                    response);
+
+            String message = responseHtml.getString("**.findAll { it.@class == 'order-summary-content' }[0]");
+            System.out.println("responseHtml is: \"" + message + "\"");
+            assertEquals("\n" + "    \n" + "    \n" + "Your Shopping Cart is empty!    " + "\n", message);
+        });
     }
 
+    @Disabled
     @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @Test
     @DisplayName("Добавление товара и корзины нового пользователя")
@@ -145,8 +195,8 @@ public class DemowebshopTests extends TestBase {
                     .when()
                     .post("/register")
                     .then()
+                    .log().all()
                     .statusCode(302);
-
         });
 
         step("Залогиниться через API и получить куку \"NOPCOMMERCE.AUTH\"", () -> {

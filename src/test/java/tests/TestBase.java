@@ -16,12 +16,12 @@ public class TestBase {
     public static final String password = "Qwerty1234";
     public static final boolean rememberMe = false;
 
-    String gender = "M",
-            requestVerificationToken = getRandomString(108),
+    String requestVerificationToken = getRandomString(108),
+            gender = "M",
             firstName = faker.name().firstName(), // Emory
             lastName = faker.name().lastName(),
             emailRegistration = getRandomEmail(),
-            passwordRegistration = getRandomString(5),
+            passwordRegistration = getRandomString(6),
             registerButton = "Register";
 
     @BeforeEach
