@@ -6,7 +6,6 @@ import io.qameta.allure.selenide.AllureSelenide;
 import io.restassured.http.Cookies;
 import io.restassured.path.xml.XmlPath;
 import io.restassured.path.xml.XmlPath.CompatibilityMode;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
@@ -16,6 +15,7 @@ import org.openqa.selenium.WebElement;
 import java.util.List;
 
 import static com.codeborne.selenide.Condition.text;
+import static com.codeborne.selenide.Selectors.*;
 import static com.codeborne.selenide.Selenide.*;
 import static com.codeborne.selenide.WebDriverRunner.getWebDriver;
 import static io.qameta.allure.Allure.step;
@@ -26,10 +26,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DemowebshopTests extends TestBase {
 
-    @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @Test
+    @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @DisplayName("Вход в личный кабинет зарегистрированного пользователя")
     void userLogInTest() {
+
         SelenideLogger.addListener("AllureSelenide", new AllureSelenide());
 
         step("Залогиниться через API и получить куку \"NOPCOMMERCE.AUTH\"", () -> {
@@ -61,12 +62,11 @@ public class DemowebshopTests extends TestBase {
                 open(""));
 
         step("Проверить, что пользователь вошел в личный кабинет", () ->
-                $$(".account").get(0).shouldHave(text(email)));
+                $(".header-links .account").shouldHave(text(email)));
     }
 
-
-    @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @Test
+    @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @DisplayName("Добавление товара в корзину залогиненного пользователя")
     void addToCartTest() {
 
@@ -102,10 +102,11 @@ public class DemowebshopTests extends TestBase {
                 .body("updatetopcartsectionhtml", is(notNullValue()));
     }
 
-    @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @Test
-    @DisplayName("Очистка корзины пользователя")
+    @Story("Проверка сайта http://demowebshop.tricentis.com/")
+    @DisplayName("Очистка корзины залогиненного пользователя")
     void updateCartTest() {
+
         SelenideLogger.addListener("AllureSelenide", new AllureSelenide());
 
         String cookie = given()
@@ -175,63 +176,56 @@ public class DemowebshopTests extends TestBase {
         });
     }
 
-
-    @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @Test
-    @DisplayName("Добавление товара и корзины нового пользователя")
-    void newUserUpdateCartTest() {
+    @Story("Проверка сайта http://demowebshop.tricentis.com/")
+    @DisplayName("Регистрация нового пользователя")
+    void newUserRegistrationTest() {
+
         SelenideLogger.addListener("AllureSelenide", new AllureSelenide());
 
-        step("Зарегистрироваться через API и получить куку \"NOPCOMMERCE.AUTH\"", () -> {
-            Cookies cookie = given()
+        step("Зарегистрироваться через GUI", () -> {
+            open("");
+            $(".header-links .ico-register").scrollTo().click();
+            $(".registration-page").shouldHave(text("Register"));
+            $(byName("Gender")).selectRadio(gender);
+            $("#FirstName").setValue(firstName);
+            $("#LastName").setValue(lastName);
+            $("#Email").setValue(emailRegistration);
+            $("#Password").setValue(passwordRegistration);
+            $("#ConfirmPassword").setValue(passwordRegistration);
+            $("#register-button").click();
+            $(".ico-logout").click();
+        });
+
+        step("Залогиниться через API и проверить существование нового пользователя", () -> {
+            String cookie = given()
                     .contentType("application/x-www-form-urlencoded")
-                    .formParam("__RequestVerificationToken", requestVerificationToken)
-                    .formParam("Gender", gender)
-                    .formParam("FirstName", firstName)
-                    .formParam("LastName", lastName)
                     .formParam("Email", emailRegistration)
                     .formParam("Password", passwordRegistration)
-                    .formParam("ConfirmPassword", passwordRegistration)
-                    .formParam("register-button", registerButton)
+                    .formParam("RememberMe", rememberMe)
                     .when()
-                    .post("/register")
+                    .post("/login")
                     .then()
-                    .log().all()
+                    .log().cookies()
                     .statusCode(302)
                     .extract()
                     .response()
-                    .getDetailedCookies();
+                    .cookie("NOPCOMMERCE.AUTH");
 
-//        step("Залогиниться через API и получить куку \"NOPCOMMERCE.AUTH\"", () -> {
-//
-//            String cookie = given()
-//                    .contentType("application/x-www-form-urlencoded")
-//                    .formParam("Email", emailRegistration)
-//                    .formParam("Password", passwordRegistration)
-//                    .formParam("RememberMe", rememberMe)
-//                    .when()
-//                    .post("/login")
-//                    .then()
-//                    .log().all()
-//                    .statusCode(200)
-//                    .extract()
-//                    .response()
-//                    .cookie("NOPCOMMERCE.AUTH");
-
-            System.out.println("\n Cookies in userLogInTest are: " + cookie + "\n");
+            System.out.println("\n Cookie \"NOPCOMMERCE.AUTH\" in userLogInTest is: " + cookie + "\n");
 
             step("Открыть любую страницу для активации сессии пользователя", () ->
                     open("/content/images/thumbs/0000215.png"));
 
-//            step("Применить куку \"NOPCOMMERCE.AUTH\"", () ->
-//                    getWebDriver().manage().addCookie(
-//                            new Cookie("NOPCOMMERCE.AUTH", cookie)));
-
-            step("Открыть основную страницу сайта", () ->
-                    open(""));
-
-            step("Проверить, что пользователь вошел в личный кабинет", () ->
-                    $(".account").shouldHave(text(emailRegistration)));
+            step("Применить куку \"NOPCOMMERCE.AUTH\"", () ->
+                    getWebDriver().manage().addCookie(
+                            new Cookie("NOPCOMMERCE.AUTH", cookie)));
         });
+
+        step("Открыть основную страницу сайта", () ->
+                open(""));
+
+        step("Проверить, что пользователь вошел в личный кабинет", () ->
+                $(".header-links .account").shouldHave(text(emailRegistration)));
     }
 }
