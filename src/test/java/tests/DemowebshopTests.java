@@ -1,6 +1,8 @@
 package tests;
 
+import com.codeborne.selenide.logevents.SelenideLogger;
 import io.qameta.allure.Story;
+import io.qameta.allure.selenide.AllureSelenide;
 import io.restassured.http.Cookies;
 import io.restassured.path.xml.XmlPath;
 import io.restassured.path.xml.XmlPath.CompatibilityMode;
@@ -28,9 +30,9 @@ public class DemowebshopTests extends TestBase {
     @Test
     @DisplayName("Вход в личный кабинет зарегистрированного пользователя")
     void userLogInTest() {
+        SelenideLogger.addListener("AllureSelenide", new AllureSelenide());
 
         step("Залогиниться через API и получить куку \"NOPCOMMERCE.AUTH\"", () -> {
-
             String cookie = given()
                     .contentType("application/x-www-form-urlencoded")
                     .formParam("Email", email)
@@ -54,13 +56,15 @@ public class DemowebshopTests extends TestBase {
                     getWebDriver().manage().addCookie(
                             new Cookie("NOPCOMMERCE.AUTH", cookie)));
 
-            step("Открыть основную страницу сайта", () ->
-                    open(""));
-
-            step("Проверить, что пользователь вошел в личный кабинет", () ->
-                    $(".account").shouldHave(text(email)));
         });
+
+        step("Открыть основную страницу сайта", () ->
+                open(""));
+
+        step("Проверить, что пользователь вошел в личный кабинет", () ->
+                $(".account").shouldHave(text(email)));
     }
+
 
     @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @Test
