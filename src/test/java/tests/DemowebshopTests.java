@@ -46,7 +46,6 @@ public class DemowebshopTests extends TestBase {
                     .extract()
                     .response()
                     .cookie("NOPCOMMERCE.AUTH");
-
             System.out.println("\n Cookie \"NOPCOMMERCE.AUTH\" in userLogInTest is: " + cookie + "\n");
 
             step("Открыть любую страницу для активации сессии пользователя", () ->
@@ -55,7 +54,6 @@ public class DemowebshopTests extends TestBase {
             step("Применить куку \"NOPCOMMERCE.AUTH\"", () ->
                     getWebDriver().manage().addCookie(
                             new Cookie("NOPCOMMERCE.AUTH", cookie)));
-
         });
 
         step("Открыть основную страницу сайта", () ->
@@ -70,6 +68,7 @@ public class DemowebshopTests extends TestBase {
     @Test
     @DisplayName("Добавление товара в корзину залогиненного пользователя")
     void addToEmptyCartTest() {
+        SelenideLogger.addListener("AllureSelenide", new AllureSelenide());
 
         Cookies cookiesAll = given()
                 .contentType("application/x-www-form-urlencoded")
@@ -84,7 +83,6 @@ public class DemowebshopTests extends TestBase {
                 .extract()
                 .response()
                 .getDetailedCookies();
-
         System.out.println("\n Cookies in addToEmptyCartTest are: " + cookiesAll + "\n");
 
         given()
@@ -107,6 +105,7 @@ public class DemowebshopTests extends TestBase {
     @Test
     @DisplayName("Очистка корзины пользователя")
     void toUpdateCartTest() {
+        SelenideLogger.addListener("AllureSelenide", new AllureSelenide());
 
         String cookie = given()
                 .contentType("application/x-www-form-urlencoded")
@@ -121,7 +120,6 @@ public class DemowebshopTests extends TestBase {
                 .extract()
                 .response()
                 .cookie("NOPCOMMERCE.AUTH");
-
         System.out.println("\n Cookie \"NOPCOMMERCE.AUTH\" in userLogInTest is: " + cookie + "\n");
 
         step("Открыть страницу товара и открыть новую сессию пользователя", () ->
@@ -154,8 +152,7 @@ public class DemowebshopTests extends TestBase {
             sleep(2000);
         });
 
-        step("Проверка отсутствия товаров в корзине через API", () -> {
-
+        step("Проверить отсутствие товаров в корзине через API", () -> {
             String response = given()
                     .cookie(cookie)
                     .when()
@@ -183,10 +180,10 @@ public class DemowebshopTests extends TestBase {
     @Test
     @DisplayName("Добавление товара и корзины нового пользователя")
     void newUserUpdateCartTest() {
+        SelenideLogger.addListener("AllureSelenide", new AllureSelenide());
 
         step("Зарегистрироваться через API и получить куку \"NOPCOMMERCE.AUTH\"", () -> {
-
-            given()
+            Cookies cookie = given()
                     .contentType("application/x-www-form-urlencoded")
                     .formParam("__RequestVerificationToken", requestVerificationToken)
                     .formParam("Gender", gender)
@@ -200,33 +197,35 @@ public class DemowebshopTests extends TestBase {
                     .post("/register")
                     .then()
                     .log().all()
-                    .statusCode(302);
-        });
-
-        step("Залогиниться через API и получить куку \"NOPCOMMERCE.AUTH\"", () -> {
-
-            String cookie = given()
-                    .contentType("application/x-www-form-urlencoded")
-                    .formParam("Email", emailRegistration)
-                    .formParam("Password", passwordRegistration)
-                    .formParam("RememberMe", rememberMe)
-                    .when()
-                    .post("/login")
-                    .then()
-                    .log().all()
-                    .statusCode(200)
+                    .statusCode(302)
                     .extract()
                     .response()
-                    .cookie("NOPCOMMERCE.AUTH");
+                    .getDetailedCookies();
+
+//        step("Залогиниться через API и получить куку \"NOPCOMMERCE.AUTH\"", () -> {
+//
+//            String cookie = given()
+//                    .contentType("application/x-www-form-urlencoded")
+//                    .formParam("Email", emailRegistration)
+//                    .formParam("Password", passwordRegistration)
+//                    .formParam("RememberMe", rememberMe)
+//                    .when()
+//                    .post("/login")
+//                    .then()
+//                    .log().all()
+//                    .statusCode(200)
+//                    .extract()
+//                    .response()
+//                    .cookie("NOPCOMMERCE.AUTH");
 
             System.out.println("\n Cookies in userLogInTest are: " + cookie + "\n");
 
             step("Открыть любую страницу для активации сессии пользователя", () ->
                     open("/content/images/thumbs/0000215.png"));
 
-            step("Применить куку \"NOPCOMMERCE.AUTH\"", () ->
-                    getWebDriver().manage().addCookie(
-                            new Cookie("NOPCOMMERCE.AUTH", cookie)));
+//            step("Применить куку \"NOPCOMMERCE.AUTH\"", () ->
+//                    getWebDriver().manage().addCookie(
+//                            new Cookie("NOPCOMMERCE.AUTH", cookie)));
 
             step("Открыть основную страницу сайта", () ->
                     open(""));
