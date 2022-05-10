@@ -67,8 +67,7 @@ public class DemowebshopTests extends TestBase {
     @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @Test
     @DisplayName("Добавление товара в корзину залогиненного пользователя")
-    void addToEmptyCartTest() {
-        SelenideLogger.addListener("AllureSelenide", new AllureSelenide());
+    void addToCartTest() {
 
         Cookies cookiesAll = given()
                 .contentType("application/x-www-form-urlencoded")
@@ -104,7 +103,7 @@ public class DemowebshopTests extends TestBase {
     @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @Test
     @DisplayName("Очистка корзины пользователя")
-    void toUpdateCartTest() {
+    void updateCartTest() {
         SelenideLogger.addListener("AllureSelenide", new AllureSelenide());
 
         String cookie = given()
