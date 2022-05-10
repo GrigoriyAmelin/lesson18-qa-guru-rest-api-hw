@@ -46,6 +46,7 @@ public class DemowebshopTests extends TestBase {
                     .extract()
                     .response()
                     .cookie("NOPCOMMERCE.AUTH");
+
             System.out.println("\n Cookie \"NOPCOMMERCE.AUTH\" in userLogInTest is: " + cookie + "\n");
 
             step("Открыть любую страницу для активации сессии пользователя", () ->
@@ -60,7 +61,7 @@ public class DemowebshopTests extends TestBase {
                 open(""));
 
         step("Проверить, что пользователь вошел в личный кабинет", () ->
-                $(".account").shouldHave(text(email)));
+                $$(".account").get(0).shouldHave(text(email)));
     }
 
 
@@ -82,6 +83,7 @@ public class DemowebshopTests extends TestBase {
                 .extract()
                 .response()
                 .getDetailedCookies();
+
         System.out.println("\n Cookies in addToEmptyCartTest are: " + cookiesAll + "\n");
 
         given()
@@ -119,6 +121,7 @@ public class DemowebshopTests extends TestBase {
                 .extract()
                 .response()
                 .cookie("NOPCOMMERCE.AUTH");
+
         System.out.println("\n Cookie \"NOPCOMMERCE.AUTH\" in userLogInTest is: " + cookie + "\n");
 
         step("Открыть страницу товара и открыть новую сессию пользователя", () ->
@@ -146,10 +149,8 @@ public class DemowebshopTests extends TestBase {
                 }
         );
 
-        step("Удалить все товары из корзины", () -> {
-            $(".update-cart-button").click();
-            sleep(2000);
-        });
+        step("Удалить все товары из корзины", () ->
+                $(".update-cart-button").click());
 
         step("Проверить отсутствие товаров в корзине через API", () -> {
             String response = given()
@@ -174,7 +175,7 @@ public class DemowebshopTests extends TestBase {
         });
     }
 
-    @Disabled
+
     @Story("Проверка сайта http://demowebshop.tricentis.com/")
     @Test
     @DisplayName("Добавление товара и корзины нового пользователя")
